@@ -17,12 +17,16 @@ import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useState } from 'react';
 import ParameterNode from './nodes/parameter';
 import ResourceNode from './nodes/resource';
+import TemplateNode from './nodes/template';
+import CategoryNode from './nodes/category';
 import { loadResourceNodes } from './nodes/loadsResourceNodes';
 import { useArmTemplateStore } from '../service/ParsedJSON';
 
 const nodeTypes = {
 	parameter: ParameterNode,
 	resource: ResourceNode,
+	template: TemplateNode,
+	category: CategoryNode,
 };
 
 function Flow() {
@@ -32,22 +36,11 @@ function Flow() {
 	const [edges, setEdges] = useState<Edge[]>([]);
 
 	useEffect(() => {
-		// Load complete tree (parameters + resources)
+		// Load the new hierarchical tree structure
 		const { nodes: treeNodes, edges: treeEdges } = loadResourceNodes(template);
 
-		// Create initial nodes - no need for separate schema or parameter nodes
-		const initialNodes: Node[] = [...treeNodes];
-
-		// Create initial edges
-		const initialEdges: Edge[] = [
-			...treeEdges.map((edge) => ({
-				...edge,
-				animated: true,
-			})),
-		];
-
-		setNodes(initialNodes);
-		setEdges(initialEdges);
+		setNodes(treeNodes);
+		setEdges(treeEdges);
 	}, [template]);
 
 	const fitViewOptions: FitViewOptions = {
@@ -88,6 +81,9 @@ function Flow() {
 				fitView
 				fitViewOptions={fitViewOptions}
 				defaultEdgeOptions={defaultEdgeOptions}
+				style={{
+					background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+				}}
 			/>
 		</div>
 	);
