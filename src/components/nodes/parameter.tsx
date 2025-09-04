@@ -6,6 +6,7 @@ interface ParameterData {
 	name?: string;
 	type?: string;
 	description?: string;
+	defaultValue?: any;
 }
 
 function ParameterNode(props: NodeProps) {
@@ -13,14 +14,20 @@ function ParameterNode(props: NodeProps) {
 	const name = data?.name || 'Unknown Parameter';
 	const type = data?.type;
 	const description = data?.description;
+	const defaultValue = data?.defaultValue;
+
+	// Format default value for display
+	const formatDefaultValue = (value: any): string => {
+		if (value === undefined || value === null) return '';
+		if (typeof value === 'string') return value;
+		if (typeof value === 'object') return JSON.stringify(value);
+		return String(value);
+	};
+
+	const displayDefaultValue = formatDefaultValue(defaultValue);
 
 	return (
-		<div style={{ position: 'relative', width: '180px', minHeight: '60px' }}>
-			<Handle
-				type="target"
-				position={Position.Top}
-				style={{ background: '#3b82f6' }}
-			/>
+		<div style={{ position: 'relative', width: '180px', minHeight: '80px' }}>
 			<div
 				style={{
 					padding: '12px',
@@ -35,14 +42,16 @@ function ParameterNode(props: NodeProps) {
 			>
 				<div
 					style={{
-						fontSize: '12px',
+						fontSize: '10px',
 						color: '#1e40af',
 						marginBottom: '4px',
 						fontWeight: '600',
 						textAlign: 'center',
+						textTransform: 'uppercase',
+						letterSpacing: '0.5px',
 					}}
 				>
-					PARAMETER
+					Parameter
 				</div>
 
 				<strong
@@ -52,6 +61,7 @@ function ParameterNode(props: NodeProps) {
 						fontSize: '14px',
 						color: '#1f2937',
 						wordBreak: 'break-word',
+						lineHeight: '1.2',
 					}}
 				>
 					{name}
@@ -68,30 +78,55 @@ function ParameterNode(props: NodeProps) {
 							background: '#e0e7ff',
 							padding: '2px 6px',
 							borderRadius: '4px',
+							fontWeight: '500',
 						}}
 					>
 						{type}
 					</div>
 				)}
 
-				{description && (
+				{displayDefaultValue && (
 					<div
 						style={{
 							fontSize: '10px',
+							color: '#059669',
+							marginBottom: '4px',
+							textAlign: 'center',
+							background: '#ecfdf5',
+							padding: '2px 6px',
+							borderRadius: '3px',
+							border: '1px solid #d1fae5',
+							wordBreak: 'break-word',
+						}}
+					>
+						Default: {displayDefaultValue}
+					</div>
+				)}
+
+				{description && (
+					<div
+						style={{
+							fontSize: '9px',
 							color: '#6b7280',
 							textAlign: 'center',
 							lineHeight: '1.3',
 							fontStyle: 'italic',
+							marginTop: '2px',
 						}}
 					>
-						{description}
+						{description.length > 80
+							? `${description.substring(0, 80)}...`
+							: description}
 					</div>
 				)}
 			</div>
+
+			{/* Bottom handle for connections to resources */}
 			<Handle
 				type="source"
 				position={Position.Bottom}
 				style={{ background: '#3b82f6' }}
+				id="param-output"
 			/>
 		</div>
 	);

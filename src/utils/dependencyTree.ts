@@ -1,31 +1,4 @@
-// Third pass: calculate levels and positions
-function calculateLevelsAndPositions(
-	nodes: ResourceNode[],
-	level = 0,
-	startY = 0
-): number {
-	let currentY = startY;
-
-	nodes.forEach((node) => {
-		node.level = level;
-		node.position = {
-			x: level * 300 + 50, // Horizontal spacing between levels
-			y: currentY,
-		};
-
-		currentY += 150; // Vertical spacing between siblings
-
-		if (node.children.length > 0) {
-			currentY = calculateLevelsAndPositions(
-				node.children,
-				level + 1,
-				currentY
-			);
-		}
-	});
-
-	return currentY;
-} // src/utils/dependencyTree.ts
+// src/utils/dependencyTree.ts
 export interface ResourceNode {
 	id: string;
 	name: string;
@@ -36,6 +9,7 @@ export interface ResourceNode {
 	children: ResourceNode[];
 	level: number;
 	position: { x: number; y: number };
+	subtreeHeight?: number; // Height of the entire subtree rooted at this node
 }
 
 export interface ParsedDependency {
@@ -43,17 +17,23 @@ export interface ParsedDependency {
 	resourceName: string;
 }
 
+// Layout configuration
+const LAYOUT_CONFIG = {
+	NODE_WIDTH: 220,
+	NODE_HEIGHT: 120,
+	HORIZONTAL_SPACING: 300, // Space between levels
+	VERTICAL_SPACING: 50, // Minimum space between siblings
+	TREE_PADDING: 100, // Padding around the tree
+	SUBTREE_SPACING: 80, // Extra space between different subtrees
+};
+
 /**
  * Parse ARM template resource ID expressions to extract resource information
- * Handles expressions like: "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
  */
 export function parseResourceId(
 	resourceIdExpression: string
 ): ParsedDependency | null {
-	// Remove brackets and quotes
 	const cleaned = resourceIdExpression.replace(/[\[\]'"]/g, '');
-
-	// Extract from resourceId() function
 	const resourceIdMatch = cleaned.match(
 		/resourceId\s*\(\s*([^,]+)\s*,\s*(.+)\s*\)/
 	);
@@ -62,7 +42,6 @@ export function parseResourceId(
 	const resourceType = resourceIdMatch[1].replace(/'/g, '').trim();
 	const resourceNameExpr = resourceIdMatch[2].trim();
 
-	// Handle variables() and parameters() expressions
 	let resourceName = resourceNameExpr;
 	const variableMatch = resourceNameExpr.match(
 		/variables\s*\(\s*'([^']+)'\s*\)/
@@ -70,12 +49,104 @@ export function parseResourceId(
 	const paramMatch = resourceNameExpr.match(/parameters\s*\(\s*'([^']+)'\s*\)/);
 
 	if (variableMatch) {
-		resourceName = `[variables('${variableMatch[1]}')]`;
+		resourceName = variableMatch[1];
 	} else if (paramMatch) {
-		resourceName = `[parameters('${paramMatch[1]}')]`;
+		resourceName = paramMatch[1];
+	} else {
+		resourceName = resourceNameExpr.replace(/'/g, '');
 	}
 
 	return { resourceType, resourceName };
+}
+
+/**
+ * Calculate the height of a subtree (number of leaf nodes it contains)
+ */
+function calculateSubtreeHeight(node: ResourceNode): number {
+	if (node.children.length === 0) {
+		node.subtreeHeight = 1;
+		return 1;
+	}
+
+	let totalHeight = 0;
+	node.children.forEach((child) => {
+		totalHeight += calculateSubtreeHeight(child);
+	});
+
+	node.subtreeHeight = totalHeight;
+	return totalHeight;
+}
+
+/**
+ * Calculate positions for nodes in a horizontal tree layout
+ */
+function calculateTreePositions(
+	nodes: ResourceNode[],
+	level = 0,
+	startX = 0,
+	parentY = 0
+): number {
+	if (nodes.length === 0) return startX;
+
+	// Calculate subtree widths for all nodes first
+	nodes.forEach((node) => calculateSubtreeHeight(node));
+
+	// Calculate total width needed for all subtrees at this level
+	const totalSubtreeWidth = nodes.reduce(
+		(sum, node) => sum + (node.subtreeHeight || 1),
+		0
+	);
+
+	// Calculate the horizontal space each subtree should occupy
+	const availableWidth = Math.max(
+		totalSubtreeWidth *
+			(LAYOUT_CONFIG.NODE_WIDTH + LAYOUT_CONFIG.HORIZONTAL_SPACING),
+		nodes.length * LAYOUT_CONFIG.SUBTREE_SPACING
+	);
+
+	let currentX = startX;
+	const levelY =
+		level * LAYOUT_CONFIG.VERTICAL_SPACING + LAYOUT_CONFIG.TREE_PADDING;
+
+	nodes.forEach((node, index) => {
+		const subtreeWidth = node.subtreeHeight || 1;
+
+		// Calculate the center X position for this subtree
+		const subtreeSpace =
+			subtreeWidth *
+			(LAYOUT_CONFIG.NODE_WIDTH + LAYOUT_CONFIG.HORIZONTAL_SPACING);
+		const subtreeCenterX = currentX + subtreeSpace / 2;
+
+		// Position the current node
+		node.level = level;
+		node.position = {
+			x: subtreeCenterX - LAYOUT_CONFIG.NODE_WIDTH / 2,
+			y: levelY,
+		};
+
+		// Recursively position children if any exist
+		if (node.children.length > 0) {
+			// Calculate the X range for children
+			const childrenStartX = currentX;
+			const childrenEndX = calculateTreePositions(
+				node.children,
+				level + 1,
+				childrenStartX,
+				levelY
+			);
+
+			// If we have children, we might need to adjust our position to be centered
+			if (node.children.length > 1) {
+				const childrenCenterX = (childrenStartX + childrenEndX) / 2;
+				node.position.x = childrenCenterX - LAYOUT_CONFIG.NODE_WIDTH / 2;
+			}
+		}
+
+		// Move to next subtree position
+		currentX += subtreeSpace + LAYOUT_CONFIG.SUBTREE_SPACING;
+	});
+
+	return currentX;
 }
 
 /**
@@ -84,14 +155,19 @@ export function parseResourceId(
 export function buildDependencyTree(resources: any[]): ResourceNode[] {
 	if (!Array.isArray(resources)) return [];
 
-	// Create a map of all resources by their identifier
 	const resourceMap = new Map<string, ResourceNode>();
+	const resourcesByType = new Map<string, ResourceNode[]>();
 
-	// First pass: create all nodes
+	// Create all nodes and index them
 	resources.forEach((resource, index) => {
+		const resourceName =
+			typeof resource.name === 'string' && resource.name.startsWith('[')
+				? resource.name
+				: resource.name || `Resource ${index}`;
+
 		const node: ResourceNode = {
 			id: `resource-${index}`,
-			name: resource.name || `Resource ${index}`,
+			name: resourceName,
 			type: resource.type || 'Unknown',
 			location: resource.location,
 			properties: resource.properties,
@@ -101,44 +177,63 @@ export function buildDependencyTree(resources: any[]): ResourceNode[] {
 			position: { x: 0, y: 0 },
 		};
 
-		// Use resource name as key for dependency lookup
-		resourceMap.set(resource.name, node);
-		// Also use type + name combination for more specific matching
-		resourceMap.set(`${resource.type}|${resource.name}`, node);
+		resourceMap.set(resourceName, node);
+
+		if (!resourcesByType.has(resource.type)) {
+			resourcesByType.set(resource.type, []);
+		}
+		resourcesByType.get(resource.type)!.push(node);
 	});
 
-	// Second pass: build parent-child relationships
-	const rootNodes: ResourceNode[] = [];
+	// Build parent-child relationships
+	const childrenSet = new Set<string>();
 
-	resources.forEach((resource) => {
-		const currentNode = resourceMap.get(resource.name);
+	resources.forEach((resource, index) => {
+		const currentNode = resourceMap.get(
+			typeof resource.name === 'string' && resource.name.startsWith('[')
+				? resource.name
+				: resource.name || `Resource ${index}`
+		);
+
 		if (!currentNode) return;
 
 		const dependencies = resource.dependsOn || [];
-		let hasParents = false;
 
 		dependencies.forEach((dep: string) => {
 			const parsedDep = parseResourceId(dep);
 			if (!parsedDep) return;
 
-			// Try to find the parent resource
-			let parentNode = resourceMap.get(parsedDep.resourceName);
+			let parentNode: ResourceNode | undefined;
+
+			// Try different matching strategies
+			parentNode = resourceMap.get(parsedDep.resourceName);
+
 			if (!parentNode) {
-				// Try with type + name combination
-				parentNode = resourceMap.get(
-					`${parsedDep.resourceType}|${parsedDep.resourceName}`
-				);
+				const resourcesOfType =
+					resourcesByType.get(parsedDep.resourceType) || [];
+				parentNode = resourcesOfType.find((r) => {
+					const resourceNameClean = r.name
+						.replace(/[\[\]'()]/g, '')
+						.toLowerCase();
+					const parsedNameClean = parsedDep.resourceName.toLowerCase();
+
+					return (
+						resourceNameClean.includes(parsedNameClean) ||
+						parsedNameClean.includes(resourceNameClean)
+					);
+				});
 			}
 
-			// If still not found, try to find by matching resource type and similar name patterns
 			if (!parentNode) {
-				for (const [key, node] of resourceMap.entries()) {
+				for (const [_, node] of resourceMap.entries()) {
 					if (node.type === parsedDep.resourceType) {
-						// Check if names match (handling variable/parameter expressions)
 						if (
-							key === parsedDep.resourceName ||
-							node.name === parsedDep.resourceName ||
-							key.includes(parsedDep.resourceName.replace(/[\[\]'()]/g, ''))
+							node.name
+								.toLowerCase()
+								.includes(parsedDep.resourceName.toLowerCase()) ||
+							parsedDep.resourceName
+								.toLowerCase()
+								.includes(node.name.toLowerCase())
 						) {
 							parentNode = node;
 							break;
@@ -148,47 +243,33 @@ export function buildDependencyTree(resources: any[]): ResourceNode[] {
 			}
 
 			if (parentNode && parentNode !== currentNode) {
-				parentNode.children.push(currentNode);
-				hasParents = true;
+				// Avoid duplicate children
+				if (!parentNode.children.find((child) => child.id === currentNode.id)) {
+					parentNode.children.push(currentNode);
+					childrenSet.add(currentNode.id);
+				}
 			}
 		});
-
-		// If no parents found, it's a root node
-		if (!hasParents) {
-			rootNodes.push(currentNode);
-		}
 	});
 
-	// Third pass: calculate levels and positions
-	function calculateLevelsAndPositions(
-		nodes: ResourceNode[],
-		level = 0,
-		startY = 0
-	): number {
-		let currentY = startY;
-
-		nodes.forEach((node) => {
-			node.level = level;
-			node.position = {
-				x: level * 300 + 50, // Horizontal spacing between levels
-				y: currentY,
-			};
-
-			currentY += 150; // Vertical spacing between siblings
-
-			if (node.children.length > 0) {
-				currentY = calculateLevelsAndPositions(
-					node.children,
-					level + 1,
-					currentY
-				);
-			}
-		});
-
-		return currentY;
+	// Collect root nodes
+	const rootNodes: ResourceNode[] = [];
+	for (const [_, node] of resourceMap.entries()) {
+		if (!childrenSet.has(node.id)) {
+			rootNodes.push(node);
+		}
 	}
 
-	calculateLevelsAndPositions(rootNodes);
+	// Sort root nodes by type and name for consistent layout
+	rootNodes.sort((a, b) => {
+		if (a.type !== b.type) {
+			return a.type.localeCompare(b.type);
+		}
+		return a.name.localeCompare(b.name);
+	});
+
+	// Calculate positions using improved layout algorithm
+	calculateTreePositions(rootNodes);
 
 	return rootNodes;
 }

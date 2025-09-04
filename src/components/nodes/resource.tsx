@@ -52,11 +52,22 @@ function ResourceNode(props: NodeProps) {
 
 	return (
 		<div style={{ position: 'relative', width: '200px', minHeight: '100px' }}>
+			{/* Top handle for connections from parameters */}
 			<Handle
 				type="target"
 				position={Position.Top}
-				style={{ background: '#555' }}
+				style={{ background: '#3b82f6' }}
+				id="param-input"
 			/>
+
+			{/* Left handle for dependency connections */}
+			<Handle
+				type="target"
+				position={Position.Left}
+				style={{ background: '#6b7280' }}
+				id="dependency-input"
+			/>
+
 			<div
 				style={{
 					padding: '12px',
@@ -194,10 +205,13 @@ function ResourceNode(props: NodeProps) {
 						</div>
 					)}
 			</div>
+
+			{/* Right handle for outgoing dependency connections */}
 			<Handle
 				type="source"
-				position={Position.Bottom}
-				style={{ background: '#555' }}
+				position={Position.Right}
+				style={{ background: '#6b7280' }}
+				id="dependency-output"
 			/>
 		</div>
 	);
