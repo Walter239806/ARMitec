@@ -1,17 +1,37 @@
-import { useArmTemplateStore } from '../../service/ParsedJSON';
+// src/components/nodes/loadsResourceNodes.ts
+import {
+	buildDependencyTree,
+	flattenTree,
+	generateTreeEdges,
+} from '../../utils/dependencyTree';
+import type { ArmTemplate } from '../../types/template';
 
-export const loadResourceNodes = () => {
-	const template = useArmTemplateStore((state) => state.template);
+export const loadResourceNodes = (template: ArmTemplate | null) => {
+	if (!Array.isArray(template?.resources)) {
+		return { nodes: [], edges: [] };
+	}
 
-	return Array.isArray(template?.resources)
-		? template.resources.map((resource: any, idx: number) => {
-				console.log('Resource:', resource);
-				return {
-					id: `resource-${idx}`,
-					type: 'resource',
-					data: resource,
-					position: { x: 300, y: 100 + idx * 120 },
-				};
-		  })
-		: [];
+	// Build dependency tree
+	const dependencyTree = buildDependencyTree(template.resources);
+
+	// Flatten for React Flow
+	const flattenedNodes = flattenTree(dependencyTree);
+
+	// Convert to React Flow node format
+	const nodes = flattenedNodes.map((node) => ({
+		id: node.id,
+		type: 'resource',
+		data: {
+			name: node.name,
+			type: node.type,
+			location: node.location,
+			properties: node.properties,
+		},
+		position: node.position,
+	}));
+
+	// Generate edges based on dependencies
+	const edges = generateTreeEdges(dependencyTree);
+
+	return { nodes, edges };
 };

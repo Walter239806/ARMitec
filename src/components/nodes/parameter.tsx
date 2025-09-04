@@ -1,73 +1,98 @@
+// src/components/nodes/parameter.tsx
 import type { NodeProps } from '@xyflow/react';
 import { Handle, Position } from '@xyflow/react';
-import { useArmTemplateStore } from '../../service/ParsedJSON';
 
-type Parameter = { key: string; description: string };
+interface ParameterData {
+	name?: string;
+	type?: string;
+	description?: string;
+}
 
-function ParameterNode(_: NodeProps) {
-	const template = useArmTemplateStore((state) => state.template);
-
-	let parameters: Parameter[] = [];
-	if (template && template.parameters) {
-		parameters = Object.entries(template.parameters).map(([key, value]) => {
-			const param = value as { metadata?: { description?: string } };
-			return {
-				key,
-				description: param.metadata?.description || '',
-			};
-		});
-	}
+function ParameterNode(props: NodeProps) {
+	const data = props.data as ParameterData;
+	const name = data?.name || 'Unknown Parameter';
+	const type = data?.type;
+	const description = data?.description;
 
 	return (
-		<div style={{ position: 'relative', width: '180px', minHeight: '80px' }}>
-			{/* Handles flush with the box edge */}
-			<Handle type="target" position={Position.Top} />
+		<div style={{ position: 'relative', width: '180px', minHeight: '60px' }}>
+			<Handle
+				type="target"
+				position={Position.Top}
+				style={{ background: '#3b82f6' }}
+			/>
 			<div
 				style={{
-					padding: '8px 8px',
-					background: '#fff',
-					border: '1px solid #888',
-					borderRadius: '7px',
+					padding: '12px',
+					background: '#eff6ff',
+					border: '2px solid #3b82f6',
+					borderRadius: '8px',
 					width: '100%',
-					maxHeight: '200px',
-					overflowY: 'auto',
 					display: 'flex',
 					flexDirection: 'column',
-					alignItems: 'stretch',
-					justifyContent: 'flex-start',
+					boxShadow: '0 2px 4px rgba(59, 130, 246, 0.1)',
 				}}
 			>
-				<strong
-					style={{ marginBottom: '6px', textAlign: 'center', fontSize: '90%' }}
-				>
-					Parameters
-				</strong>
-				<ul
+				<div
 					style={{
-						margin: 0,
-						padding: 0,
-						listStyle: 'none',
-						display: 'flex',
-						flexDirection: 'column',
-						gap: '6px',
-						fontSize: '90%',
+						fontSize: '12px',
+						color: '#1e40af',
+						marginBottom: '4px',
+						fontWeight: '600',
+						textAlign: 'center',
 					}}
 				>
-					{parameters.length > 0 ? (
-						parameters.map((param) => (
-							<li key={param.key} style={{ wordBreak: 'break-word' }}>
-								<span style={{ fontWeight: 500 }}>{param.key}</span>
-								{param.description && (
-									<span style={{ color: '#666' }}> — {param.description}</span>
-								)}
-							</li>
-						))
-					) : (
-						<li style={{ color: '#999' }}>No parameters</li>
-					)}
-				</ul>
+					PARAMETER
+				</div>
+
+				<strong
+					style={{
+						marginBottom: '6px',
+						textAlign: 'center',
+						fontSize: '14px',
+						color: '#1f2937',
+						wordBreak: 'break-word',
+					}}
+				>
+					{name}
+				</strong>
+
+				{type && (
+					<div
+						style={{
+							fontSize: '11px',
+							color: '#6366f1',
+							marginBottom: '4px',
+							textAlign: 'center',
+							fontFamily: 'monospace',
+							background: '#e0e7ff',
+							padding: '2px 6px',
+							borderRadius: '4px',
+						}}
+					>
+						{type}
+					</div>
+				)}
+
+				{description && (
+					<div
+						style={{
+							fontSize: '10px',
+							color: '#6b7280',
+							textAlign: 'center',
+							lineHeight: '1.3',
+							fontStyle: 'italic',
+						}}
+					>
+						{description}
+					</div>
+				)}
 			</div>
-			<Handle type="source" position={Position.Bottom} />
+			<Handle
+				type="source"
+				position={Position.Bottom}
+				style={{ background: '#3b82f6' }}
+			/>
 		</div>
 	);
 }

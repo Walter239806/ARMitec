@@ -1,3 +1,4 @@
+// src/components/flow.tsx
 import {
 	ReactFlow,
 	addEdge,
@@ -26,28 +27,25 @@ const nodeTypes = {
 
 function Flow() {
 	const template = useArmTemplateStore((state) => state.template);
-	const initialNodes: Node[] = [
-		{ id: 'schema', data: { label: 'Schema' }, position: { x: 5, y: 5 } },
-		{
-			id: 'parameter',
-			type: 'parameter', // <-- This tells React Flow to use your custom node
-			data: {},
-			position: { x: 185, y: 125 },
-		},
-		...loadResourceNodes(),
-	];
 
-	const initialEdges: Edge[] = [];
-
-	if (template && template?.parameters)
-		initialEdges.push({
-			id: 'e1-2',
-			source: 'schema',
-			target: 'parameter',
-			animated: true,
-		});
+	const [nodes, setNodes] = useState<Node[]>([]);
+	const [edges, setEdges] = useState<Edge[]>([]);
 
 	useEffect(() => {
+		// Load complete tree (parameters + resources)
+		const { nodes: treeNodes, edges: treeEdges } = loadResourceNodes(template);
+
+		// Create initial nodes - no need for separate schema or parameter nodes
+		const initialNodes: Node[] = [...treeNodes];
+
+		// Create initial edges
+		const initialEdges: Edge[] = [
+			...treeEdges.map((edge) => ({
+				...edge,
+				animated: true,
+			})),
+		];
+
 		setNodes(initialNodes);
 		setEdges(initialEdges);
 	}, [template]);
@@ -63,9 +61,6 @@ function Flow() {
 	const onNodeDrag: OnNodeDrag = (_, node) => {
 		console.log('drag event', node.data);
 	};
-
-	const [nodes, setNodes] = useState<Node[]>(initialNodes);
-	const [edges, setEdges] = useState<Edge[]>(initialEdges);
 
 	const onNodesChange: OnNodesChange = useCallback(
 		(changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
