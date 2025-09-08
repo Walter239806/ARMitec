@@ -2,13 +2,6 @@
 import type { ArmTemplate } from '../../types/template';
 import type { Node, Edge } from '@xyflow/react';
 
-interface TemplateNode {
-	id: string;
-	type: string;
-	data: any;
-	position: { x: number; y: number };
-}
-
 // Layout configuration - Centered and optimized for tree structure
 const LAYOUT_CONFIG = {
 	ROOT_POSITION: { x: 600, y: 50 }, // More centered horizontally
@@ -20,37 +13,37 @@ const LAYOUT_CONFIG = {
 };
 
 // Function to extract parameter references from a string
-function extractParameterReferences(value: any): string[] {
-	if (typeof value !== 'string') return [];
+// function extractParameterReferences(value: any): string[] {
+// 	if (typeof value !== 'string') return [];
 
-	const parameterRegex = /parameters\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
-	const matches: string[] = [];
-	let match;
+// 	const parameterRegex = /parameters\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+// 	const matches: string[] = [];
+// 	let match;
 
-	while ((match = parameterRegex.exec(value)) !== null) {
-		matches.push(match[1]);
-	}
+// 	while ((match = parameterRegex.exec(value)) !== null) {
+// 		matches.push(match[1]);
+// 	}
 
-	return matches;
-}
+// 	return matches;
+// }
 
 // Function to find parameter references in resource properties
-function findParameterReferencesInResource(resource: any): string[] {
-	const references = new Set<string>();
+// function findParameterReferencesInResource(resource: any): string[] {
+// 	const references = new Set<string>();
 
-	function traverse(obj: any) {
-		if (typeof obj === 'string') {
-			extractParameterReferences(obj).forEach((ref) => references.add(ref));
-		} else if (Array.isArray(obj)) {
-			obj.forEach((item) => traverse(item));
-		} else if (obj && typeof obj === 'object') {
-			Object.values(obj).forEach((value) => traverse(value));
-		}
-	}
+// 	function traverse(obj: any) {
+// 		if (typeof obj === 'string') {
+// 			extractParameterReferences(obj).forEach((ref) => references.add(ref));
+// 		} else if (Array.isArray(obj)) {
+// 			obj.forEach((item) => traverse(item));
+// 		} else if (obj && typeof obj === 'object') {
+// 			Object.values(obj).forEach((value) => traverse(value));
+// 		}
+// 	}
 
-	traverse(resource);
-	return Array.from(references);
-}
+// 	traverse(resource);
+// 	return Array.from(references);
+// }
 
 // Parse ARM template resource ID expressions with better debugging
 function parseResourceId(
