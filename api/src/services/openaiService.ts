@@ -1,24 +1,42 @@
-import OpenAI from 'openai';
+import { AzureOpenAI } from 'openai';
 import type { ArmTemplate } from '../types/template';
+import dotenv from 'dotenv';
 
+dotenv.config();
 export class OpenAIService {
-	private openai: OpenAI;
-	private model: string;
+	private client: AzureOpenAI;
+	private modelName: string;
+	private deployment: string;
 	private maxTokens: number;
-	private temperature: number;
 
 	constructor() {
-		if (!process.env.OPENAI_API_KEY) {
-			throw new Error('OPENAI_API_KEY environment variable is required');
+		if (!process.env.OPENAI_API_KEY || !process.env.OPENAI_ENDPOINT) {
+			throw new Error(
+				'OPENAI_API_KEY and OPENAI_ENDPOINT environment variables are required'
+			);
 		}
 
-		this.openai = new OpenAI({
-			apiKey: process.env.OPENAI_API_KEY,
-		});
+		const endpoint = process.env.OPENAI_ENDPOINT?.replace(/\/$/, ''); // Remove trailing slash
+		const apiKey = process.env.OPENAI_API_KEY;
+		const deployment = process.env.OPENAI_DEPLOYMENT || 'gpt-4o';
+		const apiVersion = process.env.OPENAI_API_VERSION || '2024-04-01-preview';
 
-		this.model = process.env.OPENAI_MODEL || 'gpt-4';
-		this.maxTokens = parseInt(process.env.OPENAI_MAX_TOKENS || '2000');
-		this.temperature = parseFloat(process.env.OPENAI_TEMPERATURE || '0.7');
+		// Azure OpenAI configuration
+		const options = { endpoint, apiKey, deployment, apiVersion };
+		this.client = new AzureOpenAI(options);
+
+		this.modelName = 'gpt-4o';
+		this.deployment = deployment;
+		this.maxTokens = parseInt(process.env.OPENAI_MAX_TOKENS || '4000');
+
+		console.log('Azure OpenAI Service initialized:', {
+			endpoint,
+			deployment,
+			modelName: this.modelName,
+			maxTokens: this.maxTokens,
+			apiVersion,
+			constructedURL: `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`,
+		});
 	}
 
 	async chatWithTemplate(
@@ -34,11 +52,11 @@ export class OpenAIService {
 				chatHistory
 			);
 
-			const completion = await this.openai.chat.completions.create({
-				model: this.model,
+			const completion = await this.client.chat.completions.create({
+				model: this.modelName,
 				messages,
 				max_tokens: this.maxTokens,
-				temperature: this.temperature,
+				temperature: 0.7,
 			});
 
 			return (
@@ -58,19 +76,19 @@ export class OpenAIService {
 		try {
 			const systemPrompt = `You are an expert Azure ARM template developer. Your task is to generate valid ARM templates based on user requirements.
 
-IMPORTANT RULES:
-1. Always return a valid JSON ARM template
-2. Include proper Azure resource types and API versions
-3. Use appropriate parameter patterns
-4. Include helpful descriptions
-5. Follow ARM template best practices
-6. Return both the template AND an explanation
-
-Format your response as JSON with this structure:
+CRITICAL: You MUST return your response as a valid JSON object with exactly this structure:
 {
-  "template": { /* ARM template JSON */ },
-  "explanation": "Detailed explanation of the template components and design decisions"
-}`;
+  "template": { /* Complete ARM template JSON object */ },
+  "explanation": "Detailed explanation of the template"
+}
+
+IMPORTANT RULES:
+1. Do NOT use markdown code blocks or backticks
+2. Return only the raw JSON object
+3. The "template" field must contain a complete, valid ARM template
+4. Include proper Azure resource types and API versions
+5. Use appropriate parameters and follow ARM template best practices
+6. The response must be valid JSON that can be parsed directly`;
 
 			const userPrompt = `Generate an ARM template for: ${requirements}
       
@@ -83,14 +101,14 @@ Requirements:
 - Follow Azure naming conventions
 - Include outputs where relevant`;
 
-			const completion = await this.openai.chat.completions.create({
-				model: this.model,
+			const completion = await this.client.chat.completions.create({
+				model: this.modelName,
 				messages: [
 					{ role: 'system', content: systemPrompt },
 					{ role: 'user', content: userPrompt },
 				],
 				max_tokens: 4000,
-				temperature: 0.3, // Lower temperature for more consistent template generation
+				temperature: 0.3,
 			});
 
 			const response = completion.choices[0]?.message?.content;
@@ -100,12 +118,23 @@ Requirements:
 
 			// Try to parse the JSON response
 			try {
-				const parsed = JSON.parse(response);
+				// Clean the response in case it has markdown wrapping
+				let cleanedResponse = response.trim();
+				if (cleanedResponse.startsWith('```json')) {
+					cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+				} else if (cleanedResponse.startsWith('```')) {
+					cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+				}
+				
+				const parsed = JSON.parse(cleanedResponse);
+				console.log('Successfully parsed template generation response');
 				return {
 					template: parsed.template,
 					explanation: parsed.explanation || 'Template generated successfully',
 				};
-			} catch {
+			} catch (parseError) {
+				console.error('JSON parsing failed:', parseError);
+				console.log('Raw response:', response.substring(0, 500) + '...');
 				// If JSON parsing fails, treat the whole response as explanation
 				return {
 					template: {
@@ -122,7 +151,15 @@ Requirements:
 			}
 		} catch (error) {
 			console.error('Template generation error:', error);
-			throw new Error('Failed to generate ARM template. Please try again.');
+			console.error('Error details:', {
+				message: error instanceof Error ? error.message : 'Unknown error',
+				stack: error instanceof Error ? error.stack : undefined,
+				model: this.modelName,
+				endpoint: process.env.OPENAI_ENDPOINT,
+			});
+			throw new Error(
+				`Failed to generate ARM template: ${error instanceof Error ? error.message : 'Unknown error'}`
+			);
 		}
 	}
 
@@ -211,11 +248,11 @@ Resource types in template: ${this.extractResourceTypes(currentTemplate).join(',
 				chatHistory
 			);
 
-			const stream = await this.openai.chat.completions.create({
-				model: this.model,
+			const stream = await this.client.chat.completions.create({
+				model: this.modelName,
 				messages,
 				max_tokens: this.maxTokens,
-				temperature: this.temperature,
+				temperature: 0.7,
 				stream: true,
 			});
 

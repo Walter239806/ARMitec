@@ -35,9 +35,21 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/chat', chatRoutes); // Add chat routes
 
+// Error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+	console.error('Error occurred:', err);
+	res.status(500).json({
+		success: false,
+		error: err.message || 'Internal server error'
+	});
+});
+
 // 404 handler
-app.use('*', (req, res) => {
-	res.status(404).json({ error: 'Route not found' });
+app.use((req, res) => {
+	res.status(404).json({ 
+		success: false,
+		error: 'Route not found' 
+	});
 });
 
 app.listen(PORT, () => {
