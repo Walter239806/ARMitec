@@ -1,69 +1,46 @@
-# React + TypeScript + Vite
+# ARMitect
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+ARMitect is a web-based application that simplifies Azure infrastructure design by converting ARM templates into interactive diagrams and vice versa. It helps users understand, build, and export ARM templates visually, making cloud deployments accessible to users of all skill levels.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### MVP
 
-## Expanding the ESLint configuration
+- Upload ARM template to generate diagram
+- Drag-and-drop diagram builder
+- Export diagram as ARM template
+- Import existing templates into editor
+- AI-powered summary of template represented actions
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Stretch Goals
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Real-time validation of template logic
+- Collaborative editing mode
+- Support for multiple Azure resource types
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+## Getting Started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+ARMitect is designed to be intuitive and easy to use. Users can:
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+1. Upload an existing ARM template to visualize its structure.
+2. Use the drag-and-drop interface to build or modify infrastructure diagrams.
+3. Export the diagram as a valid ARM template for deployment.
+4. View AI-generated summaries to understand the template's purpose and actions.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Backend Architecture
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+ARMitect includes a backend built in **NodeJS**, chosen for its performance and safety. The backend supports:
+
+- AI integration for summarizing template logic
+- REST API endpoints for future features like collaboration and storage
+
+## Success Metrics
+
+- Users can upload and visualize ARM templates
+- Users can build and export valid ARM templates from diagrams
+- AI summaries provide accurate insights
+- Positive feedback from testers on usability and clarity
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
