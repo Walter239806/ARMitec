@@ -12,7 +12,6 @@ interface ChatRequest {
 
 interface GenerateTemplateRequest {
 	requirements: string;
-	templateType?: string;
 }
 
 export class ChatController {
@@ -60,8 +59,7 @@ export class ChatController {
 		next: NextFunction
 	): Promise<void> => {
 		try {
-			const { requirements, templateType }: GenerateTemplateRequest = req.body;
-
+			const { requirements }: GenerateTemplateRequest = req.body;
 			if (!requirements?.trim()) {
 				res.status(400).json({
 					success: false,
@@ -70,10 +68,7 @@ export class ChatController {
 				return;
 			}
 
-			const result = await this.openaiService.generateTemplate(
-				requirements,
-				templateType
-			);
+			const result = await this.openaiService.generateTemplate(requirements);
 
 			const apiResponse: ApiResponse = {
 				success: true,

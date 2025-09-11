@@ -1,8 +1,12 @@
-import Flow from './components/flow';
+//import Flow from './components/flow';
+import { BoxLayout } from './components/box';
 import { useEffect, useState } from 'react';
 import { useArmTemplateStore } from './service/ParsedJSON';
 import type { ArmTemplate } from './types/template';
 import Welcome from './components/welcome';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
 
 function App() {
 	const [fileExists, setFileExists] = useState<boolean | null>(null);
@@ -34,7 +38,7 @@ function App() {
 				setFileExists(false);
 			}
 		};
-		
+
 		checkFile();
 	}, [setTemplate]);
 
@@ -51,9 +55,16 @@ function App() {
 
 	return (
 		<div>
-			<Flow />)
+			<BoxLayout />
 		</div>
 	);
 }
 
 export default App;
+
+// Render the app when this file is loaded directly
+createRoot(document.getElementById('root')!).render(
+	<StrictMode>
+		<App />
+	</StrictMode>
+);

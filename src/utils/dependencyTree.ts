@@ -21,10 +21,10 @@ export interface ParsedDependency {
 const LAYOUT_CONFIG = {
 	NODE_WIDTH: 220,
 	NODE_HEIGHT: 120,
-	HORIZONTAL_SPACING: 300, // Space between levels
+	HORIZONTAL_SPACING: 120, // Space between levels (reduced from 200)
 	VERTICAL_SPACING: 50, // Minimum space between siblings
 	TREE_PADDING: 100, // Padding around the tree
-	SUBTREE_SPACING: 80, // Extra space between different subtrees
+	SUBTREE_SPACING: 50, // Extra space between different subtrees (reduced from 80)
 };
 
 /**
@@ -108,7 +108,7 @@ function calculateTreePositions(
 	const levelY =
 		level * LAYOUT_CONFIG.VERTICAL_SPACING + LAYOUT_CONFIG.TREE_PADDING;
 
-	nodes.forEach((node, index) => {
+	nodes.forEach((node) => {
 		const subtreeWidth = node.subtreeHeight || 1;
 
 		// Calculate the center X position for this subtree

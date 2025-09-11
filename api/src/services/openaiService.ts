@@ -1,6 +1,6 @@
+import dotenv from 'dotenv';
 import { AzureOpenAI } from 'openai';
 import type { ArmTemplate } from '../types/template';
-import dotenv from 'dotenv';
 
 dotenv.config();
 export class OpenAIService {
@@ -70,8 +70,7 @@ export class OpenAIService {
 	}
 
 	async generateTemplate(
-		requirements: string,
-		templateType?: string
+		requirements: string
 	): Promise<{ template: ArmTemplate; explanation: string }> {
 		try {
 			const systemPrompt = `You are an expert Azure ARM template developer. Your task is to generate valid ARM templates based on user requirements.
@@ -91,8 +90,6 @@ IMPORTANT RULES:
 6. The response must be valid JSON that can be parsed directly`;
 
 			const userPrompt = `Generate an ARM template for: ${requirements}
-      
-${templateType ? `Template type focus: ${templateType}` : ''}
 
 Requirements:
 - Valid ARM template structure
@@ -121,11 +118,15 @@ Requirements:
 				// Clean the response in case it has markdown wrapping
 				let cleanedResponse = response.trim();
 				if (cleanedResponse.startsWith('```json')) {
-					cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+					cleanedResponse = cleanedResponse
+						.replace(/^```json\s*/, '')
+						.replace(/\s*```$/, '');
 				} else if (cleanedResponse.startsWith('```')) {
-					cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+					cleanedResponse = cleanedResponse
+						.replace(/^```\s*/, '')
+						.replace(/\s*```$/, '');
 				}
-				
+
 				const parsed = JSON.parse(cleanedResponse);
 				console.log('Successfully parsed template generation response');
 				return {
