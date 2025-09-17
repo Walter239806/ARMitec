@@ -3,7 +3,8 @@ import dotenv from 'dotenv';
 import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import chatRoutes from './routes/chatRoutes'; // Add this import
+import chatRoutes from './routes/chatRoutes';
+import armTemplateRoutes from './routes/armTemplate';
 
 // Load environment variables
 dotenv.config();
@@ -34,21 +35,29 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/chat', chatRoutes); // Add chat routes
+app.use('/api/arm-templates', armTemplateRoutes);
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-	console.error('Error occurred:', err);
-	res.status(500).json({
-		success: false,
-		error: err.message || 'Internal server error'
-	});
-});
+app.use(
+	(
+		err: any,
+		req: express.Request,
+		res: express.Response,
+		next: express.NextFunction
+	) => {
+		console.error('Error occurred:', err);
+		res.status(500).json({
+			success: false,
+			error: err.message || 'Internal server error',
+		});
+	}
+);
 
 // 404 handler
 app.use((req, res) => {
-	res.status(404).json({ 
+	res.status(404).json({
 		success: false,
-		error: 'Route not found' 
+		error: 'Route not found',
 	});
 });
 
