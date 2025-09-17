@@ -19,9 +19,11 @@ import {
 interface MenuBarProps {
 	onFileAction?: (action: 'new' | 'open' | 'save' | 'export') => void;
 	onEditAction?: (action: 'prev' | 'next') => void;
+	canGoBack?: boolean;
+	canGoForward?: boolean;
 }
 
-export function MenuBar({ onFileAction, onEditAction }: MenuBarProps) {
+export function MenuBar({ onFileAction, onEditAction, canGoBack = false, canGoForward = false }: MenuBarProps) {
 	const [fileMenuAnchor, setFileMenuAnchor] = useState<null | HTMLElement>(null);
 	const [editMenuAnchor, setEditMenuAnchor] = useState<null | HTMLElement>(null);
 
@@ -163,11 +165,17 @@ export function MenuBar({ onFileAction, onEditAction }: MenuBarProps) {
 							horizontal: 'left',
 						}}
 					>
-						<MenuItem onClick={() => handleEditAction('prev')}>
+						<MenuItem 
+							onClick={() => handleEditAction('prev')}
+							disabled={!canGoBack}
+						>
 							<PrevIcon sx={{ mr: 1, fontSize: '18px' }} />
 							<Typography variant="body2">Previous</Typography>
 						</MenuItem>
-						<MenuItem onClick={() => handleEditAction('next')}>
+						<MenuItem 
+							onClick={() => handleEditAction('next')}
+							disabled={!canGoForward}
+						>
 							<NextIcon sx={{ mr: 1, fontSize: '18px' }} />
 							<Typography variant="body2">Next</Typography>
 						</MenuItem>

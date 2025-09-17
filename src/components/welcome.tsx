@@ -1,4 +1,16 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
+import {
+	TextField,
+	Button,
+	Typography,
+	Box,
+	Container,
+	Paper
+} from '@mui/material';
+import {
+	Create as CreateIcon,
+	Upload as UploadIcon
+} from '@mui/icons-material';
 import { useArmTemplateStore } from '../service/ParsedJSON';
 import { createTemplate } from '../service/CopilotChat';
 import type { ArmTemplate } from '../types/template';
@@ -6,6 +18,9 @@ import type { ArmTemplate } from '../types/template';
 const Welcome = () => {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const setTemplate = useArmTemplateStore((state) => state.setTemplate);
+	const [ideaText, setIdeaText] = useState(
+		'Create a secure web application with Azure App Service, including SSL certificate, custom domain support, Application Insights monitoring, and auto-scaling capabilities.'
+	);
 
 	const handleFileImport = () => {
 		fileInputRef.current?.click();
@@ -44,15 +59,13 @@ const Welcome = () => {
 	};
 
 	const handleDraftClick = async () => {
-		const idea = (document.querySelector('textarea') as HTMLTextAreaElement)
-			.value;
-		if (!idea) {
+		if (!ideaText.trim()) {
 			alert('Please enter your idea.');
 			return;
 		}
 
 		try {
-			const generatedTemplate = await createTemplate(idea);
+			const generatedTemplate = await createTemplate(ideaText);
 			const template = generatedTemplate.template as ArmTemplate;
 			console.log('Generated Template:', template);
 			// Basic validation for ARM template
@@ -61,6 +74,24 @@ const Welcome = () => {
 			} else {
 				// Store in browser storage
 				localStorage.setItem('armTemplate', JSON.stringify(template));
+
+				// Create chat messages for the initial idea and AI response
+				const userMessage = {
+					id: Date.now().toString(),
+					content: ideaText,
+					role: 'user' as const,
+					timestamp: new Date()
+				};
+
+				const aiMessage = {
+					id: (Date.now() + 1).toString(),
+					content: `I've generated an ARM template based on your idea: "${ideaText}". The template has been created and is now loaded in the editor.`,
+					role: 'assistant' as const,
+					timestamp: new Date()
+				};
+
+				const chatMessages = [userMessage, aiMessage];
+				localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
 
 				// Update the store
 				setTemplate(template);
@@ -76,47 +107,96 @@ const Welcome = () => {
 	};
 
 	return (
-		<div style={{ padding: '20px', textAlign: 'center' }}>
-			<h1>Welcome to ARMitec</h1>
-			<p>Your one-stop solution for ARM template management.</p>
-			<p>Get started by creating or importing an ARM template.</p>
-			<p>
-				You can start typing your idea here and copilot will draft it for you.
-			</p>
-			<div>
-				<textarea
-					style={{
-						width: '100%',
-						padding: '10px',
-						borderRadius: '5px',
-						border: '1px solid #ccc',
-						fontSize: '16px',
-					}}
-					rows={4}
-					placeholder="Type your idea here..."
-					value={
-						'Create a secure web application with Azure App Service, including SSL certificate, custom domain support, Application Insights monitoring, and auto-scaling capabilities.'
-					}
-				/>
-				<button style={{ marginTop: '10px' }} onClick={handleDraftClick}>
-					Draft ARM Template
-				</button>
-			</div>
-			<p>OR</p>
-			<div style={{ marginTop: '20px' }}>
-				<button onClick={handleFileImport} style={{ marginRight: '10px' }}>
-					Import ARM Template
-				</button>
-			</div>
+		<Container maxWidth="md" sx={{ py: 4 }}>
+			<Paper
+				elevation={3}
+				sx={{
+					p: 4,
+					textAlign: 'center',
+					backgroundColor: '#f9f9f9',
+					borderRadius: 2
+				}}
+			>
+				<Typography variant="h3" component="h1" gutterBottom sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+					Welcome to ARMitec
+				</Typography>
 
-			<input
-				ref={fileInputRef}
-				type="file"
-				accept=".json"
-				onChange={handleFileChange}
-				style={{ display: 'none' }}
-			/>
-		</div>
+				<Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+					Your one-stop solution for ARM template management.
+				</Typography>
+
+				<Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+					Get started by creating or importing an ARM template.
+				</Typography>
+
+				<Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+					You can start typing your idea here and copilot will draft it for you.
+				</Typography>
+
+				<Box sx={{ mb: 3 }}>
+					<TextField
+						fullWidth
+						multiline
+						rows={4}
+						value={ideaText}
+						onChange={(e) => setIdeaText(e.target.value)}
+						placeholder="Type your idea here..."
+						variant="outlined"
+						sx={{
+							mb: 2,
+							'& .MuiOutlinedInput-root': {
+								backgroundColor: 'white',
+								fontSize: '16px',
+							},
+						}}
+					/>
+
+					<Button
+						startIcon={<CreateIcon />}
+						onClick={handleDraftClick}
+						variant="contained"
+						color="primary"
+						size="large"
+						sx={{
+							minWidth: '200px',
+							fontSize: '16px',
+							py: 1.5,
+						}}
+					>
+						Draft ARM Template
+					</Button>
+				</Box>
+
+				<Typography variant="h6" color="text.secondary" sx={{ my: 2 }}>
+					OR
+				</Typography>
+
+				<Box>
+					<Button
+						startIcon={<UploadIcon />}
+						onClick={handleFileImport}
+						variant="outlined"
+						color="primary"
+						size="large"
+						sx={{
+							minWidth: '200px',
+							fontSize: '16px',
+							py: 1.5,
+						}}
+					>
+						Import ARM Template
+					</Button>
+				</Box>
+
+				<input
+					ref={fileInputRef}
+					type="file"
+					accept=".json"
+					onChange={handleFileChange}
+					style={{ display: 'none' }}
+				/>
+			</Paper>
+		</Container>
 	);
 };
 

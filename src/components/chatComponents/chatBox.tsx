@@ -15,6 +15,8 @@ import {
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import { useArmTemplateStore } from '../../service/ParsedJSON';
+import { useTemplateHistoryStore } from '../../service/TemplateHistoryStore';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 interface Message {
 	id: string;
@@ -42,29 +44,7 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
 		},
 		ref
 	) => {
-		const [messages, setMessages] = useState<Message[]>([
-			{
-				id: 'example-1',
-				content:
-					'Hello! Can you help me create an ARM template for a storage account?',
-				role: 'user',
-				timestamp: new Date(Date.now() - 300000), // 5 minutes ago
-			},
-			{
-				id: 'example-2',
-				content:
-					"Of course! I can help you create an ARM template for an Azure Storage Account. Here's a basic template structure that includes the storage account resource with common configurations.",
-				role: 'assistant',
-				timestamp: new Date(Date.now() - 240000), // 4 minutes ago
-			},
-			{
-				id: 'example-3',
-				content:
-					'That looks great! Can you also add blob storage configuration to it?',
-				role: 'user',
-				timestamp: new Date(Date.now() - 60000), // 1 minute ago
-			},
-		]);
+		const [messages, setMessages] = useState<Message[]>([]);
 		const [inputText, setInputText] = useState('');
 		const [isLoading, setIsLoading] = useState(false);
 		const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -72,6 +52,32 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
 
 		// Get the setTemplate function from the store
 		const setTemplate = useArmTemplateStore((state) => state.setTemplate);
+
+		// Get the template history store functions
+		const { addTemplate: addToHistory } = useTemplateHistoryStore();
+
+		// Load persisted messages on component mount
+		useEffect(() => {
+			const savedMessages = localStorage.getItem('chatMessages');
+			if (savedMessages) {
+				try {
+					const parsedMessages = JSON.parse(savedMessages).map((msg: any) => ({
+						...msg,
+						timestamp: new Date(msg.timestamp),
+					}));
+					setMessages(parsedMessages);
+				} catch (error) {
+					console.error('Error loading saved messages:', error);
+				}
+			}
+		}, []);
+
+		// Save messages to localStorage whenever messages change
+		useEffect(() => {
+			if (messages.length > 0) {
+				localStorage.setItem('chatMessages', JSON.stringify(messages));
+			}
+		}, [messages]);
 
 		const scrollToBottom = () => {
 			messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -148,12 +154,29 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
 						'Updating template in store and localStorage:',
 						data.template
 					);
+
+					// Get current template before updating for history tracking
+					const currentTemplate = JSON.parse(
+						localStorage.getItem('armTemplate') || 'null'
+					);
+
+					// Add current template to history before AI modification (if it exists)
+					if (currentTemplate) {
+						addToHistory(currentTemplate);
+						console.log(
+							'Added previous template to history before AI modification'
+						);
+					}
+
 					// Save to localStorage for persistence
 					localStorage.setItem('armTemplate', JSON.stringify(data.template));
+
 					// Update the store to trigger flow refresh without reload
-					setTemplate(data.template);
+					// Set addToHistory to true to track the AI-modified template
+					setTemplate(data.template, true);
+
 					console.log(
-						'Template updated successfully - flow should refresh automatically'
+						'Template updated successfully - both previous and current templates added to history'
 					);
 				}
 			} catch (error) {
@@ -183,6 +206,7 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
 
 		const clearChat = () => {
 			setMessages([]);
+			localStorage.removeItem('chatMessages');
 		};
 
 		useImperativeHandle(ref, () => ({
@@ -312,21 +336,41 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
 								},
 							}}
 						/>
-						<Button
-							endIcon={<SendIcon />}
-							onClick={sendMessage}
-							disabled={!inputText.trim() || isLoading}
-							variant="contained"
-							color="primary"
-							size="medium"
-							sx={{
-								minWidth: '80px',
-								height: '40px',
-								fontSize: '14px',
-							}}
-						>
-							Send
-						</Button>
+						<div>
+							<Button
+								endIcon={<SendIcon />}
+								onClick={sendMessage}
+								disabled={!inputText.trim() || isLoading}
+								variant="contained"
+								color="primary"
+								size="medium"
+								sx={{
+									minWidth: '80px',
+									height: '40px',
+									fontSize: '14px',
+									marginTop: '8px',
+								}}
+							>
+								Send
+							</Button>
+							<Button
+								endIcon={<DeleteIcon />}
+								onClick={clearChat}
+								disabled={messages.length === 0 && !isLoading}
+								variant="contained"
+								color="secondary"
+								size="medium"
+								sx={{
+									minWidth: '80px',
+									height: '40px',
+									fontSize: '14px',
+									marginLeft: '8px',
+									marginTop: '8px',
+								}}
+							>
+								Clear
+							</Button>
+						</div>
 					</div>
 				</div>
 			</div>

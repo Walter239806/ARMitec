@@ -8,7 +8,7 @@ const LAYOUT_CONFIG = {
 	CATEGORY_SPACING: 500, // Increased spacing between categories
 	CATEGORY_Y_OFFSET: 200, // Space below root
 	PARAMETER_SPACING: 185, // Increased by 30% total for better vertical spacing
-	RESOURCE_SPACING: { x: 250, y: 180 }, // Increased vertical spacing for better tree visualization
+	RESOURCE_SPACING: { x: 250, y: 250 }, // Increased vertical spacing for better resource separation
 	PADDING: 50,
 };
 

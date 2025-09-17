@@ -83,8 +83,8 @@ function calculateSubtreeHeight(node: ResourceNode): number {
 function calculateTreePositions(
 	nodes: ResourceNode[],
 	level = 0,
-	startX = 0,
-	parentY = 0
+	startX = 0
+	//	parentY = 0
 ): number {
 	if (nodes.length === 0) return startX;
 
@@ -92,17 +92,17 @@ function calculateTreePositions(
 	nodes.forEach((node) => calculateSubtreeHeight(node));
 
 	// Calculate total width needed for all subtrees at this level
-	const totalSubtreeWidth = nodes.reduce(
-		(sum, node) => sum + (node.subtreeHeight || 1),
-		0
-	);
+	// const totalSubtreeWidth = nodes.reduce(
+	// 	(sum, node) => sum + (node.subtreeHeight || 1),
+	// 	0
+	// );
 
 	// Calculate the horizontal space each subtree should occupy
-	const availableWidth = Math.max(
-		totalSubtreeWidth *
-			(LAYOUT_CONFIG.NODE_WIDTH + LAYOUT_CONFIG.HORIZONTAL_SPACING),
-		nodes.length * LAYOUT_CONFIG.SUBTREE_SPACING
-	);
+	// const availableWidth = Math.max(
+	// 	totalSubtreeWidth *
+	// 		(LAYOUT_CONFIG.NODE_WIDTH + LAYOUT_CONFIG.HORIZONTAL_SPACING),
+	// 	nodes.length * LAYOUT_CONFIG.SUBTREE_SPACING
+	// );
 
 	let currentX = startX;
 	const levelY =
@@ -131,8 +131,8 @@ function calculateTreePositions(
 			const childrenEndX = calculateTreePositions(
 				node.children,
 				level + 1,
-				childrenStartX,
-				levelY
+				childrenStartX
+				//levelY
 			);
 
 			// If we have children, we might need to adjust our position to be centered
