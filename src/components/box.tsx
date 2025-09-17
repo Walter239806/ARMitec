@@ -48,7 +48,7 @@ export function BoxLayout() {
 			{/* Right Chat Toggle Button */}
 			{!chatOpen && (
 				<Fab
-					color="secondary"
+					color="primary"
 					onClick={toggleChat}
 					sx={{
 						position: 'fixed',

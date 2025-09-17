@@ -1,72 +1,43 @@
 import type { NodeProps } from '@xyflow/react';
 import { Handle, Position } from '@xyflow/react';
 
-interface ParameterData {
+interface TemplateData {
 	name?: string;
-	type?: string;
-	description?: string;
-	defaultValue?: any;
+	schema?: string;
+	contentVersion?: string;
+	parameterCount?: number;
+	resourceCount?: number;
 }
 
-function ParameterNode(props: NodeProps) {
-	const data = props.data as ParameterData;
-	const name = data?.name || 'Unknown Parameter';
-	const type = data?.type;
-	const description = data?.description;
-	const defaultValue = data?.defaultValue;
-
-	// Format default value for display
-	const formatDefaultValue = (value: any): string => {
-		if (value === undefined || value === null) return '';
-		if (typeof value === 'string') return value;
-		if (typeof value === 'object') return JSON.stringify(value);
-		return String(value);
-	};
-
-	const displayDefaultValue = formatDefaultValue(defaultValue);
+function TemplateNode(props: NodeProps) {
+	const data = props.data as TemplateData;
+	const name = data?.name || 'ARM Template';
+	const schema = data?.schema;
+	const contentVersion = data?.contentVersion;
+	const parameterCount = data?.parameterCount || 0;
+	const resourceCount = data?.resourceCount || 0;
 
 	return (
-		<div style={{ position: 'relative', width: '180px', minHeight: '80px' }}>
-			{/* Top handle for connection from previous parameter or category */}
-			<Handle
-				type="target"
-				position={Position.Top}
-				style={{ background: '#3b82f6' }}
-				id="param-input"
-			/>
-
+		<div style={{ position: 'relative', width: '200px', minHeight: '120px' }}>
 			<div
 				style={{
-					padding: '12px',
-					background: '#eff6ff',
-					border: '2px solid #3b82f6',
-					borderRadius: '8px',
+					padding: '16px',
+					background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+					border: '3px solid #4f46e5',
+					borderRadius: '12px',
 					width: '100%',
 					display: 'flex',
 					flexDirection: 'column',
-					boxShadow: '0 2px 4px rgba(59, 130, 246, 0.1)',
+					boxShadow: '0 4px 8px rgba(79, 70, 229, 0.2)',
+					color: 'white',
 				}}
 			>
-				<div
-					style={{
-						fontSize: '10px',
-						color: '#1e40af',
-						marginBottom: '4px',
-						fontWeight: '600',
-						textAlign: 'center',
-						textTransform: 'uppercase',
-						letterSpacing: '0.5px',
-					}}
-				>
-					Parameter
-				</div>
-
 				<strong
 					style={{
-						marginBottom: '6px',
+						marginBottom: '8px',
 						textAlign: 'center',
-						fontSize: '14px',
-						color: '#1f2937',
+						fontSize: '16px',
+						fontWeight: '700',
 						wordBreak: 'break-word',
 						lineHeight: '1.2',
 					}}
@@ -74,77 +45,56 @@ function ParameterNode(props: NodeProps) {
 					{name}
 				</strong>
 
-				{type && (
+				{contentVersion && (
 					<div
 						style={{
 							fontSize: '11px',
-							color: '#6366f1',
-							marginBottom: '4px',
+							color: '#e0e7ff',
+							marginBottom: '6px',
 							textAlign: 'center',
 							fontFamily: 'monospace',
-							background: '#e0e7ff',
-							padding: '2px 6px',
-							borderRadius: '4px',
-							fontWeight: '500',
 						}}
 					>
-						{type}
+						v{contentVersion}
 					</div>
 				)}
 
-				{displayDefaultValue && (
-					<div
-						style={{
-							fontSize: '10px',
-							color: '#059669',
-							marginBottom: '4px',
-							textAlign: 'center',
-							background: '#ecfdf5',
-							padding: '2px 6px',
-							borderRadius: '3px',
-							border: '1px solid #d1fae5',
-							wordBreak: 'break-word',
-						}}
-					>
-						Default: {displayDefaultValue}
+				<div
+					style={{
+						fontSize: '12px',
+						color: '#c7d2fe',
+						textAlign: 'center',
+						display: 'flex',
+						justifyContent: 'space-around',
+						marginTop: '8px',
+					}}
+				>
+					<div>
+						<div style={{ fontWeight: '600' }}>{parameterCount}</div>
+						<div style={{ fontSize: '10px' }}>Parameters</div>
 					</div>
-				)}
-
-				{description && (
-					<div
-						style={{
-							fontSize: '9px',
-							color: '#6b7280',
-							textAlign: 'center',
-							lineHeight: '1.3',
-							fontStyle: 'italic',
-							marginTop: '2px',
-						}}
-					>
-						{description.length > 80
-							? `${description.substring(0, 80)}...`
-							: description}
+					<div>
+						<div style={{ fontWeight: '600' }}>{resourceCount}</div>
+						<div style={{ fontSize: '10px' }}>Resources</div>
 					</div>
-				)}
+				</div>
 			</div>
 
-			{/* Bottom handle for connection to next parameter */}
+			{/* Bottom handles for connections to parameters and resources */}
 			<Handle
 				type="source"
 				position={Position.Bottom}
-				style={{ background: '#3b82f6' }}
-				id="param-output"
+				style={{ background: '#4f46e5', left: '35%' }}
+				id="template-to-params"
 			/>
-
-			{/* Right handle for parameter references to resources */}
 			<Handle
 				type="source"
-				position={Position.Right}
-				style={{ background: '#8b5cf6' }}
-				id="param-reference"
+				position={Position.Bottom}
+				style={{ background: '#059669', left: '65%' }}
+				id="template-to-resources"
 			/>
 		</div>
 	);
 }
 
-export default ParameterNode;
+export default TemplateNode;
