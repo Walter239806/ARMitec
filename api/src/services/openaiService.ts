@@ -43,7 +43,7 @@ export class OpenAIService {
 		userMessage: string,
 		currentTemplate?: ArmTemplate,
 		chatHistory?: Array<{ role: 'user' | 'assistant'; content: string }>
-	): Promise<string> {
+	): Promise<{ template?: ArmTemplate; explanation: string; isStructured: boolean }> {
 		try {
 			const systemPrompt = this.buildSystemPrompt(currentTemplate);
 			const messages = this.buildMessages(
@@ -59,10 +59,35 @@ export class OpenAIService {
 				temperature: 0.7,
 			});
 
-			return (
-				completion.choices[0]?.message?.content ||
-				"I apologize, but I couldn't generate a response."
-			);
+			const response = completion.choices[0]?.message?.content;
+			if (!response) {
+				return {
+					explanation: "I apologize, but I couldn't generate a response.",
+					isStructured: false
+				};
+			}
+
+			const cleanedResponse = this.cleanResponse(response);
+
+			// Try to parse as structured JSON response (template + explanation)
+			try {
+				const parsed = JSON.parse(cleanedResponse);
+				if (parsed.template && parsed.explanation) {
+					return {
+						template: parsed.template,
+						explanation: parsed.explanation,
+						isStructured: true
+					};
+				}
+			} catch (parseError) {
+				// Not JSON or doesn't have expected structure, treat as plain text
+			}
+
+			// Return as plain explanation if not structured
+			return {
+				explanation: cleanedResponse,
+				isStructured: false
+			};
 		} catch (error) {
 			console.error('OpenAI API Error:', error);
 			throw new Error('Failed to get AI response. Please try again.');
@@ -115,18 +140,7 @@ Requirements:
 
 			// Try to parse the JSON response
 			try {
-				// Clean the response in case it has markdown wrapping
-				let cleanedResponse = response.trim();
-				if (cleanedResponse.startsWith('```json')) {
-					cleanedResponse = cleanedResponse
-						.replace(/^```json\s*/, '')
-						.replace(/\s*```$/, '');
-				} else if (cleanedResponse.startsWith('```')) {
-					cleanedResponse = cleanedResponse
-						.replace(/^```\s*/, '')
-						.replace(/\s*```$/, '');
-				}
-
+				const cleanedResponse = this.cleanResponse(response);
 				const parsed = JSON.parse(cleanedResponse);
 				console.log('Successfully parsed template generation response');
 				return {
@@ -175,12 +189,29 @@ CAPABILITIES:
 - Debug template issues
 - Provide Azure resource guidance
 
+CRITICAL RESPONSE FORMAT:
+You MUST ALWAYS return your response as a valid JSON object with exactly this structure:
+{
+  "template": { /* Complete ARM template JSON object - OPTIONAL */ },
+  "explanation": "Detailed explanation of the template, concepts, or answer"
+}
+
+IMPORTANT RULES:
+1. ALWAYS return JSON format - no exceptions
+2. Do NOT use markdown code blocks or backticks
+3. Return only the raw JSON object that can be parsed directly
+4. The "explanation" field must contain your detailed response/answer
+5. Include "template" field only when creating/modifying ARM templates
+6. For general questions/discussions, omit the "template" field entirely
+7. When including templates, ensure proper Azure resource types and API versions
+8. Follow ARM template best practices
+
 RESPONSE STYLE:
-- Be clear and concise
+- Be clear and concise in explanations
 - Provide practical examples
 - Explain Azure concepts when helpful
 - Focus on ARM template best practices
-- If generating code, ensure it's valid JSON`;
+- Ensure templates are production-ready`;
 
 		if (currentTemplate) {
 			prompt += `
@@ -219,6 +250,35 @@ Resource types in template: ${this.extractResourceTypes(currentTemplate).join(',
 		messages.push({ role: 'user', content: userMessage });
 
 		return messages;
+	}
+
+	private cleanResponse(response: string): string {
+		let cleanedResponse = response.trim();
+		
+		// First, try to extract JSON from markdown code blocks
+		const jsonBlockMatch = cleanedResponse.match(/```json\s*([\s\S]*?)\s*```/);
+		if (jsonBlockMatch) {
+			return jsonBlockMatch[1].trim();
+		}
+		
+		// Try to extract JSON from regular code blocks
+		const codeBlockMatch = cleanedResponse.match(/```\s*([\s\S]*?)\s*```/);
+		if (codeBlockMatch) {
+			const content = codeBlockMatch[1].trim();
+			// Check if the content looks like JSON (starts with { or [)
+			if (content.startsWith('{') || content.startsWith('[')) {
+				return content;
+			}
+		}
+		
+		// Try to find JSON object within the text (look for { ... } pattern)
+		const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+		if (jsonMatch) {
+			return jsonMatch[0].trim();
+		}
+		
+		// If no JSON structure found, return the cleaned text
+		return cleanedResponse;
 	}
 
 	private extractResourceTypes(template: ArmTemplate): string[] {
@@ -260,7 +320,7 @@ Resource types in template: ${this.extractResourceTypes(currentTemplate).join(',
 			for await (const chunk of stream) {
 				const content = chunk.choices[0]?.delta?.content;
 				if (content) {
-					yield content;
+					yield this.cleanResponse(content);
 				}
 			}
 		} catch (error) {

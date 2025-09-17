@@ -42,7 +42,9 @@ export class ChatController {
 			const apiResponse: ApiResponse = {
 				success: true,
 				data: {
-					message: response,
+					message: response.explanation,
+					template: response.template,
+					isStructured: response.isStructured,
 					timestamp: new Date().toISOString(),
 				},
 			};

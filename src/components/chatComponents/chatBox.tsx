@@ -6,11 +6,20 @@ import React, {
 	useRef,
 	useState,
 } from 'react';
+import {
+	TextField,
+	Button,
+	Typography,
+	Card,
+	CardContent,
+} from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
+import { useArmTemplateStore } from '../../service/ParsedJSON';
 
 interface Message {
 	id: string;
-	text: string;
-	sender: 'user' | 'ai';
+	content: string;
+	role: 'user' | 'assistant';
 	timestamp: Date;
 }
 
@@ -33,11 +42,36 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
 		},
 		ref
 	) => {
-		const [messages, setMessages] = useState<Message[]>([]);
+		const [messages, setMessages] = useState<Message[]>([
+			{
+				id: 'example-1',
+				content:
+					'Hello! Can you help me create an ARM template for a storage account?',
+				role: 'user',
+				timestamp: new Date(Date.now() - 300000), // 5 minutes ago
+			},
+			{
+				id: 'example-2',
+				content:
+					"Of course! I can help you create an ARM template for an Azure Storage Account. Here's a basic template structure that includes the storage account resource with common configurations.",
+				role: 'assistant',
+				timestamp: new Date(Date.now() - 240000), // 4 minutes ago
+			},
+			{
+				id: 'example-3',
+				content:
+					'That looks great! Can you also add blob storage configuration to it?',
+				role: 'user',
+				timestamp: new Date(Date.now() - 60000), // 1 minute ago
+			},
+		]);
 		const [inputText, setInputText] = useState('');
 		const [isLoading, setIsLoading] = useState(false);
 		const messagesEndRef = useRef<HTMLDivElement>(null);
 		const inputRef = useRef<HTMLInputElement>(null);
+
+		// Get the setTemplate function from the store
+		const setTemplate = useArmTemplateStore((state) => state.setTemplate);
 
 		const scrollToBottom = () => {
 			messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -52,45 +86,89 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
 
 			const userMessage: Message = {
 				id: Date.now().toString(),
-				text: inputText.trim(),
-				sender: 'user',
+				content: inputText.trim(),
+				role: 'user',
 				timestamp: new Date(),
 			};
 
-			setMessages((prev) => [...prev, userMessage]);
+			setMessages((prev) => {
+				console.log('Adding user message:', userMessage);
+				const newMessages = [...prev, userMessage];
+				console.log('Updated messages after user:', newMessages);
+				return newMessages;
+			});
 			setInputText('');
 			setIsLoading(true);
 
-			onMessageSend?.(userMessage.text);
+			onMessageSend?.(userMessage.content);
+
+			// Create initial AI message for streaming
+			const aiMessageId = (Date.now() + 1).toString();
+			const initialAiMessage: Message = {
+				id: aiMessageId,
+				content: '',
+				role: 'assistant',
+				timestamp: new Date(),
+			};
+
+			setMessages((prev) => [...prev, initialAiMessage]);
 
 			try {
+				const requestBody = {
+					message: userMessage.content,
+					currentTemplate: localStorage.getItem('armTemplate')
+						? JSON.parse(localStorage.getItem('armTemplate') as string)
+						: null,
+					chatHistory: [...messages, userMessage],
+				};
+
+				//console.log('Sending request to API:', requestBody);
+				setIsLoading(true);
 				const response = await axios.post(
-					'http://localhost:3001/api/chat/m',
-					{
-						message: userMessage.text,
-						context: 'ARM template assistance',
-					}
+					'http://localhost:3001/api/chat/message',
+					requestBody
 				);
 
-				const aiMessage: Message = {
-					id: (Date.now() + 1).toString(),
-					text:
-						response.data.response ||
-						'Sorry, I could not process your request.',
-					sender: 'ai',
-					timestamp: new Date(),
-				};
+				const apiResponse = response.data;
+				const data = apiResponse.data; // Access the nested data object
 
-				setMessages((prev) => [...prev, aiMessage]);
+				initialAiMessage.content = data.message;
+
+				setMessages((prev) => {
+					const updatedMessages = prev.map((msg) =>
+						msg.id === aiMessageId
+							? { ...msg, content: initialAiMessage.content }
+							: msg
+					);
+					return updatedMessages;
+				});
+
+				if (data.template) {
+					console.log(
+						'Updating template in store and localStorage:',
+						data.template
+					);
+					// Save to localStorage for persistence
+					localStorage.setItem('armTemplate', JSON.stringify(data.template));
+					// Update the store to trigger flow refresh without reload
+					setTemplate(data.template);
+					console.log(
+						'Template updated successfully - flow should refresh automatically'
+					);
+				}
 			} catch (error) {
 				console.error('Error sending message:', error);
-				const errorMessage: Message = {
-					id: (Date.now() + 1).toString(),
-					text: 'Sorry, I encountered an error. Please try again.',
-					sender: 'ai',
-					timestamp: new Date(),
-				};
-				setMessages((prev) => [...prev, errorMessage]);
+				// Update the AI message with error text
+				setMessages((prev) =>
+					prev.map((msg) =>
+						msg.id === aiMessageId
+							? {
+									...msg,
+									content: 'Sorry, I encountered an error. Please try again.',
+							  }
+							: msg
+					)
+				);
 			} finally {
 				setIsLoading(false);
 			}
@@ -111,6 +189,9 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
 			clearChat,
 		}));
 
+		// console.log('ChatBox render - messages:', messages);
+		// console.log('Messages length:', messages.length);
+
 		return (
 			<div className={`flex flex-col h-full bg-transparent pb-6 ${className}`}>
 				{/* Messages Container */}
@@ -127,53 +208,78 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
 						</div>
 					) : (
 						<div className="space-y-4">
-							{messages.map((message) => (
-								<div
-									key={message.id}
-									className={`flex ${
-										message.sender === 'user' ? 'justify-end' : 'justify-start'
-									}`}
-								>
+							{messages.map((message) => {
+								// console.log('Rendering message:', message);
+								return (
 									<div
-										className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-											message.sender === 'user'
-												? 'bg-blue-500 text-white'
-												: 'bg-gray-200 text-gray-800'
+										key={message.id}
+										className={`flex ${
+											message.role === 'user' ? 'justify-end' : 'justify-start'
 										}`}
 									>
-										<p className="text-sm">{message.text}</p>
-										<p
-											className={`text-xs mt-1 ${
-												message.sender === 'user'
-													? 'text-blue-100'
-													: 'text-gray-500'
-											}`}
+										<Card
+											sx={{
+												maxWidth: { xs: '300px', lg: '400px' },
+												backgroundColor:
+													message.role === 'user' ? '#1976d2' : '#f5f5f5',
+												boxShadow: 2,
+												borderRadius: 2,
+												padding: '8px',
+												marginBottom: '8px',
+											}}
 										>
-											{message.timestamp.toLocaleTimeString([], {
-												hour: '2-digit',
-												minute: '2-digit',
-											})}
-										</p>
+											<CardContent sx={{ padding: '12px 16px !important' }}>
+												<Typography
+													variant="body2"
+													sx={{
+														fontWeight: 'bold',
+														color: message.role === 'user' ? 'white' : 'black',
+														fontSize: '0.875rem',
+													}}
+												>
+													{message.content}
+												</Typography>
+												<Typography
+													variant="caption"
+													sx={{
+														color:
+															message.role === 'user'
+																? 'rgba(255,255,255,0.7)'
+																: 'rgba(0,0,0,0.7)',
+														fontSize: '0.75rem',
+														marginTop: '4px',
+														display: 'block',
+													}}
+												>
+													{message.timestamp.toLocaleTimeString([], {
+														hour: '2-digit',
+														minute: '2-digit',
+													})}
+												</Typography>
+											</CardContent>
+										</Card>
 									</div>
-								</div>
-							))}
+								);
+							})}
 
 							{isLoading && (
 								<div className="flex justify-start">
-									<div className="bg-gray-200 text-gray-800 max-w-xs lg:max-w-md px-4 py-2 rounded-lg">
+									<div className="bg-gray-200 max-w-xs lg:max-w-md px-4 py-2 rounded-lg">
 										<div className="flex items-center space-x-2">
 											<div className="flex space-x-1">
-												<div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+												<div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
 												<div
-													className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+													className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
 													style={{ animationDelay: '0.1s' }}
 												></div>
 												<div
-													className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+													className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
 													style={{ animationDelay: '0.2s' }}
 												></div>
 											</div>
-											<span className="text-sm">AI is typing...</span>
+											<span className="text-sm text-black">
+												AI is typing...
+											</span>
 										</div>
 									</div>
 								</div>
@@ -186,24 +292,41 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
 
 				{/* Input Area - Fixed at bottom */}
 				<div className="flex flex-col p-6 border-t border-gray-200 bg-white mt-4 mb-4">
-					<div className="flex gap-4">
-						<input
-							ref={inputRef}
-							type="text"
+					<div className="flex gap-4 items-end">
+						<TextField
+							inputRef={inputRef}
+							fullWidth
+							multiline
+							maxRows={4}
 							value={inputText}
 							onChange={(e) => setInputText(e.target.value)}
 							onKeyDown={handleKeyPress}
 							placeholder={placeholder}
-							className="flex-1 px-100 py-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm w-200"
 							disabled={isLoading}
+							variant="outlined"
+							size="small"
+							sx={{
+								'& .MuiOutlinedInput-root': {
+									backgroundColor: 'white',
+									fontSize: '14px',
+								},
+							}}
 						/>
-						<button
+						<Button
+							endIcon={<SendIcon />}
 							onClick={sendMessage}
 							disabled={!inputText.trim() || isLoading}
-							className="ml-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+							variant="contained"
+							color="primary"
+							size="medium"
+							sx={{
+								minWidth: '80px',
+								height: '40px',
+								fontSize: '14px',
+							}}
 						>
 							Send
-						</button>
+						</Button>
 					</div>
 				</div>
 			</div>
