@@ -39,6 +39,40 @@ router.get('/resource/:resourceType', async (req, res) => {
 });
 
 /**
+ * GET /api/arm-templates/resource/:resourceType/schema
+ * Extract only the resource schema/definition for a specific resource type
+ */
+router.get('/resource/:resourceType/schema', async (req, res) => {
+	try {
+		const { resourceType } = req.params;
+
+		// Decode URL parameter (e.g., Microsoft.Compute%2FvirtualMachines)
+		const decodedResourceType = decodeURIComponent(resourceType);
+
+		console.log(
+			`Fetching ARM resource schema for: ${decodedResourceType}`
+		);
+
+		const schema =
+			await scraperService.getResourceSchema(decodedResourceType);
+
+		res.json({
+			success: true,
+			resourceType: decodedResourceType,
+			schema,
+			extractedAt: new Date().toISOString(),
+		});
+	} catch (error: any) {
+		console.error('Error fetching ARM resource schema:', error);
+		res.status(500).json({
+			success: false,
+			error: error.message,
+			resourceType: req.params.resourceType,
+		});
+	}
+});
+
+/**
  * GET /api/arm-templates/available-types
  * Get list of available resource types
  */
