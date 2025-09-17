@@ -9,6 +9,7 @@ import ChatBox from './chatComponents/chatBox';
 import type { ChatBoxRef } from './chatComponents/chatBox';
 import Flow from './flow';
 import { LeftDrawer } from './LeftDrawer';
+import { MenuBar } from './MenuBar';
 
 export function BoxLayout() {
 	const [drawerOpen, setDrawerOpen] = useState(false);
@@ -25,8 +26,19 @@ export function BoxLayout() {
 		setChatOpen(!chatOpen);
 	};
 
+	const handleFileAction = (action: 'new' | 'open' | 'save' | 'export') => {
+		console.log('File action:', action);
+		// TODO: Implement file actions
+	};
+
+	const handleEditAction = (action: 'prev' | 'next') => {
+		console.log('Edit action:', action);
+		// TODO: Implement edit actions
+	};
+
 	return (
 		<Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+			<MenuBar onFileAction={handleFileAction} onEditAction={handleEditAction} />
 			<LeftDrawer drawerOpen={drawerOpen} toggleDrawer={toggleDrawer} />
 
 			{/* Main Content Area */}
