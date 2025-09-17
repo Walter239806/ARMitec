@@ -29,7 +29,8 @@ export class ArmTemplateScraperService {
 			const response = await axios.get(documentationUrl, {
 				headers: {
 					'User-Agent': 'Mozilla/5.0 (compatible; ArmTemplateBot/1.0)',
-					Accept: 'application/json,text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+					Accept:
+						'application/json,text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
 				},
 				timeout: 10000,
 			});
@@ -37,8 +38,10 @@ export class ArmTemplateScraperService {
 			let armTemplate: ArmTemplate | null = null;
 
 			// Check if response is raw JSON (for GitHub raw files)
-			if (documentationUrl.includes('raw.githubusercontent.com') ||
-				response.headers['content-type']?.includes('application/json')) {
+			if (
+				documentationUrl.includes('raw.githubusercontent.com') ||
+				response.headers['content-type']?.includes('application/json')
+			) {
 				// Axios automatically parses JSON, so response.data should already be an object
 				if (typeof response.data === 'object' && response.data !== null) {
 					armTemplate = response.data;
@@ -175,9 +178,10 @@ export class ArmTemplateScraperService {
 		const template = await this.getResourceTemplate(resourceType);
 
 		// Extract only the resources that match the requested resource type
-		const matchingResources = (template.resources as any[])?.filter((resource: any) =>
-			resource.type === resourceType
-		) || [];
+		const matchingResources =
+			(template.resources as any[])?.filter(
+				(resource: any) => resource.type === resourceType
+			) || [];
 
 		if (matchingResources.length === 0) {
 			throw new Error(`No resource definition found for type: ${resourceType}`);
@@ -189,7 +193,7 @@ export class ArmTemplateScraperService {
 			apiVersion: matchingResources[0].apiVersion,
 			properties: this.extractResourceProperties(matchingResources[0]),
 			requiredProperties: this.identifyRequiredProperties(matchingResources[0]),
-			description: `Schema for creating ${resourceType} resources`
+			description: `Schema for creating ${resourceType} resources`,
 		};
 	}
 
@@ -235,7 +239,7 @@ export class ArmTemplateScraperService {
 		}
 
 		if (Array.isArray(obj)) {
-			return obj.map(item => this.cleanArmExpressions(item));
+			return obj.map((item) => this.cleanArmExpressions(item));
 		}
 
 		if (obj && typeof obj === 'object') {
@@ -255,19 +259,29 @@ export class ArmTemplateScraperService {
 	private buildDocumentationUrl(resourceType: string): string {
 		// Map resource types to their corresponding quickstart template paths
 		const resourceTemplateMap: Record<string, string> = {
-			'Microsoft.Compute/virtualMachines': 'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.compute/vm-simple-linux/azureDeploy.json',
-			'Microsoft.Storage/storageAccounts': 'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.storage/storage-account-create/azureDeploy.json',
-			'Microsoft.Network/virtualNetworks': 'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.network/vnet-create/azureDeploy.json',
-			'Microsoft.Network/networkSecurityGroups': 'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.network/nsg-create/azureDeploy.json',
-			'Microsoft.Network/publicIPAddresses': 'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.network/public-ip-create/azureDeploy.json',
-			'Microsoft.Web/sites': 'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.web/webapp-basic-linux/azureDeploy.json',
-			'Microsoft.Sql/servers': 'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.sql/sql-database/azureDeploy.json',
-			'Microsoft.KeyVault/vaults': 'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.keyvault/key-vault-create/azureDeploy.json',
+			'Microsoft.Compute/virtualMachines':
+				'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.compute/vm-simple-linux/azureDeploy.json',
+			'Microsoft.Storage/storageAccounts':
+				'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.storage/storage-account-create/azureDeploy.json',
+			'Microsoft.Network/virtualNetworks':
+				'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.network/vnet-create/azureDeploy.json',
+			'Microsoft.Network/networkSecurityGroups':
+				'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.network/nsg-create/azureDeploy.json',
+			'Microsoft.Network/publicIPAddresses':
+				'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.network/public-ip-create/azureDeploy.json',
+			'Microsoft.Web/sites':
+				'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.web/webapp-basic-linux/azureDeploy.json',
+			'Microsoft.Sql/servers':
+				'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.sql/sql-database/azureDeploy.json',
+			'Microsoft.KeyVault/vaults':
+				'https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/quickstarts/microsoft.keyvault/key-vault-create/azureDeploy.json',
 		};
 
 		const templateUrl = resourceTemplateMap[resourceType];
 		if (!templateUrl) {
-			throw new Error(`No quickstart template available for resource type: ${resourceType}`);
+			throw new Error(
+				`No quickstart template available for resource type: ${resourceType}`
+			);
 		}
 
 		return templateUrl;
@@ -281,13 +295,6 @@ export class ArmTemplateScraperService {
 		return [
 			'Microsoft.Compute/virtualMachines',
 			'Microsoft.Storage/storageAccounts',
-			'Microsoft.Network/virtualNetworks',
-			'Microsoft.Network/networkSecurityGroups',
-			'Microsoft.Network/publicIPAddresses',
-			'Microsoft.Network/networkInterfaces',
-			'Microsoft.Web/sites',
-			'Microsoft.Sql/servers',
-			'Microsoft.KeyVault/vaults',
 			// Add more as needed
 		];
 	}

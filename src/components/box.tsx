@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
-import { Box, Drawer, IconButton, Fab, Slide } from '@mui/material';
+import { Box, IconButton, Fab, Slide } from '@mui/material';
 import {
-	Menu as MenuIcon,
 	Chat as ChatIcon,
 	Close as CloseIcon,
 } from '@mui/icons-material';
@@ -9,6 +8,7 @@ import {
 import ChatBox from './chatComponents/chatBox';
 import type { ChatBoxRef } from './chatComponents/chatBox';
 import Flow from './flow';
+import { LeftDrawer } from './LeftDrawer';
 
 export function BoxLayout() {
 	const [drawerOpen, setDrawerOpen] = useState(false);
@@ -27,55 +27,7 @@ export function BoxLayout() {
 
 	return (
 		<Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-			{/* Left Drawer */}
-			<Drawer
-				variant="persistent"
-				anchor="left"
-				open={drawerOpen}
-				sx={{
-					width: 0,
-					flexShrink: 0,
-					'& .MuiDrawer-paper': {
-						width: 300,
-						boxSizing: 'border-box',
-						backgroundColor: '#f5f5f5',
-					},
-				}}
-			>
-				<Box sx={{ p: 2 }}>
-					<Box
-						sx={{
-							display: 'flex',
-							justifyContent: 'space-between',
-							alignItems: 'center',
-							mb: 2,
-						}}
-					>
-						<h3>Menu</h3>
-						<IconButton onClick={toggleDrawer}>
-							<CloseIcon />
-						</IconButton>
-					</Box>
-					<p>Drawer content goes here...</p>
-				</Box>
-			</Drawer>
-
-			{/* Left Drawer Toggle Button */}
-			{!drawerOpen && (
-				<Fab
-					color="primary"
-					size="small"
-					onClick={toggleDrawer}
-					sx={{
-						position: 'fixed',
-						top: 16,
-						left: 16,
-						zIndex: 1200,
-					}}
-				>
-					<MenuIcon />
-				</Fab>
-			)}
+			<LeftDrawer drawerOpen={drawerOpen} toggleDrawer={toggleDrawer} />
 
 			{/* Main Content Area */}
 			<Box
@@ -83,7 +35,7 @@ export function BoxLayout() {
 				sx={{
 					flexGrow: 1,
 					transition: 'margin-left 0.3s',
-					marginLeft: drawerOpen ? '300px' : '0px',
+					marginLeft: drawerOpen ? '400px' : '0px',
 					marginRight: chatOpen ? '300px' : '0px',
 					position: 'relative',
 					overflow: 'hidden',

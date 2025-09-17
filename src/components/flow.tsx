@@ -34,17 +34,29 @@ function Flow() {
 
 	const [nodes, setNodes] = useState<Node[]>([]);
 	const [edges, setEdges] = useState<Edge[]>([]);
+	const [flowKey, setFlowKey] = useState(0);
 
 	useEffect(() => {
 		console.log('Flow component template:', template);
+		
+		// Clear existing state first
+		setNodes([]);
+		setEdges([]);
+		
+		// Force ReactFlow to remount by updating the key
+		setFlowKey(prev => prev + 1);
+		
 		// Load the new hierarchical tree structure
 		const { nodes: treeNodes, edges: treeEdges } = loadResourceNodes(template);
 
 		console.log('Generated nodes:', treeNodes);
 		console.log('Generated edges:', treeEdges);
 
-		setNodes(treeNodes);
-		setEdges(treeEdges);
+		// Use setTimeout to ensure the clear state is applied before setting new state
+		setTimeout(() => {
+			setNodes(treeNodes);
+			setEdges(treeEdges);
+		}, 0);
 	}, [template]);
 
 	// Calculate initial viewport based on ARM Template, Parameters, and Resources nodes
@@ -116,6 +128,7 @@ function Flow() {
 			}}
 		>
 			<ReactFlow
+				key={flowKey}
 				nodes={nodes}
 				edges={edges}
 				nodeTypes={nodeTypes}

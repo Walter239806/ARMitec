@@ -7,7 +7,7 @@ const LAYOUT_CONFIG = {
 	ROOT_POSITION: { x: 600, y: 50 }, // More centered horizontally
 	CATEGORY_SPACING: 500, // Increased spacing between categories
 	CATEGORY_Y_OFFSET: 200, // Space below root
-	PARAMETER_SPACING: 140, // Reduced to fit more parameters on screen
+	PARAMETER_SPACING: 185, // Increased by 30% total for better vertical spacing
 	RESOURCE_SPACING: { x: 250, y: 180 }, // Increased vertical spacing for better tree visualization
 	PADDING: 50,
 };
@@ -420,7 +420,7 @@ function positionResourceTree(
 		const childWidths: number[] = [];
 
 		node.children.forEach((child: any) => {
-			const childWidth = calculateSubtreeWidth(child) * 250; // 200px node + 50px spacing
+			const childWidth = calculateSubtreeWidth(child) * 12; // 200px node + extremely tight spacing
 			childWidths.push(childWidth);
 			totalChildWidth += childWidth;
 		});
@@ -460,12 +460,12 @@ function positionResourceTree(
 	resourceTree.forEach((rootNode, index) => {
 		console.log(`\nPositioning root tree ${index + 1}: ${rootNode.name}`);
 
-		const treeWidth = calculateSubtreeWidth(rootNode) * 250; // 200px node + 50px spacing
+		const treeWidth = calculateSubtreeWidth(rootNode) * 12; // 200px node + extremely tight spacing
 		const treeCenterX = currentX + treeWidth / 2;
 
 		const usedWidth = positionSubtree(rootNode, treeCenterX, startY, 0);
 
-		currentX += Math.max(treeWidth, usedWidth) + 100; // Extra spacing between root trees
+		currentX += Math.max(treeWidth, usedWidth) + 5; // Extra spacing between root trees (extremely tight)
 	});
 
 	console.log('=== Tree Positioning Complete ===');
